@@ -41,11 +41,11 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.6);
             transition: transform 0.3s ease;
             
-            /* ЗОЛОТАЯ РАМКА В СТИЛЕ ДЕТСКОГО АЛЬБОМА */
-            background-color: #0b1120; /* Темный фон внутри рамки */
-            border: 8px solid #d4af37; /* Золотая рамка */
+            /* ЗОЛОТАЯ РАМКА */
+            background-color: #0b1120; 
+            border: 8px solid #d4af37; 
             box-sizing: border-box;
-            padding: 10px; /* Отступ от рамки до видео */
+            padding: 10px; 
         }
 
         .video-wrapper:hover {
@@ -55,12 +55,12 @@
         video {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* ВАЖНО: показываем видео ЦЕЛИКОМ, без обрезки */
+            object-fit: contain; 
             display: block;
             border-radius: 10px;
         }
 
-        /* Надпись "Жми!" - только для первого раза */
+        /* Надпись "Жми!" - только для самого первого раза */
         .tap-hint {
             position: absolute;
             top: 50%;
@@ -129,8 +129,8 @@
             font-weight: 600;
         }
 
-        /* Кнопка "Еще!" */
-        .btn-more {
+        /* Кнопка "Жми на банку" */
+        .btn-next {
             margin-top: 30px;
             background: rgba(212, 175, 55, 0.95);
             color: #0f172a;
@@ -147,30 +147,13 @@
             z-index: 30;
         }
 
-        .btn-more.visible {
+        .btn-next.visible {
             opacity: 1;
             pointer-events: auto;
         }
 
-        .btn-more:hover {
+        .btn-next:hover {
             transform: scale(1.1);
-        }
-
-        /* Постоянная подсказка внизу */
-        .bottom-hint {
-            position: absolute;
-            bottom: -40px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: rgba(212, 175, 55, 0.6);
-            font-size: 0.9rem;
-            white-space: nowrap;
-            pointer-events: none;
-            transition: opacity 0.3s;
-        }
-
-        .bottom-hint.hidden {
-            opacity: 0;
         }
 
         /* Снежинки */
@@ -201,20 +184,19 @@
             <video id="jar-video" muted playsinline preload="auto">
                 <source src="jar-video.mp4" type="video/mp4">
             </video>
-            <div class="tap-hint" id="tap-hint">👆 ЖМИ НА БАНКУ! 👆</div>
+            <div class="tap-hint" id="tap-hint">👆 ЖМИ! 👆</div>
         </div>
 
         <div class="paper" id="paper">
             <span class="paper-text" id="prediction-text"></span>
         </div>
 
-        <button class="btn-more" id="btn-more" onclick="resetJar(event)">🎲 Еще одно!</button>
-        
-        <div class="bottom-hint" id="bottom-hint">✨ Нажми на банку для нового предсказания ✨</div>
+        <!-- Кнопка теперь сама запускает следующее предсказание -->
+        <button class="btn-next" id="btn-next" onclick="nextPrediction(event)">✨ Жми! ✨</button>
     </div>
 
     <script>
-        // ⏱️ НАСТРОЙКА ЗАДЕРЖКИ
+// ⏱️ НАСТРОЙКА ЗАДЕРЖКИ
         const PAPER_DELAY = 1500; 
 
         const predictions = [
@@ -263,13 +245,11 @@
         let isAnimating = false;
         let isFirstClick = true;
         
-        const videoWrapper = document.getElementById('video-wrapper');
         const jarVideo = document.getElementById('jar-video');
         const paper = document.getElementById('paper');
         const predictionText = document.getElementById('prediction-text');
-        const btnMore = document.getElementById('btn-more');
+        const btnNext = document.getElementById('btn-next');
         const tapHint = document.getElementById('tap-hint');
-        const bottomHint = document.getElementById('bottom-hint');
         const rustleSound = document.getElementById('rustle-sound');
         const bgMusic = document.getElementById('bg-music');
 
@@ -286,23 +266,27 @@
             }
         }
 
+        // Главная функция: запускает видео и показывает предсказание
         function pullPrediction() {
             if (isAnimating || paper.classList.contains('show')) return;
             
             isAnimating = true;
             startMusic();
 
+            // Убираем самую первую подсказку навсегда
             if (isFirstClick) {
                 tapHint.classList.add('hidden');
                 isFirstClick = false;
             }
 
+            // Выбираем случайное предсказание
             let randomIndex;
             do {
                 randomIndex = Math.floor(Math.random() * predictions.length);
             } while (randomIndex === lastIndex && predictions.length > 1);
             lastIndex = randomIndex;
 
+            // Запускаем видео с самого начала
             jarVideo.currentTime = 0;
             jarVideo.play().then(() => {
                 playRustle();
@@ -311,8 +295,9 @@
                     predictionText.innerText = predictions[randomIndex];
                     paper.classList.add('show');
                     
+                    // Показываем кнопку для следующего раза
                     setTimeout(() => {
-                        btnMore.classList.add('visible');
+                        btnNext.classList.add('visible');
                         isAnimating = false;
                     }, 500);
                 }, PAPER_DELAY);
@@ -323,14 +308,18 @@
             });
         }
 
-        function resetJar(event) {
-            event.stopPropagation(); 
+        // Новая функция: скрывает старое и сразу запускает новое
+        function nextPrediction(event) {
+            event.stopPropagation(); // Чтобы клик по кнопке не считался кликом по банке
             
+            // 1. Прячем кнопку и бумажку
+            btnNext.classList.remove('visible');
             paper.classList.remove('show');
-            btnMore.classList.remove('visible');
-            jarVideo.currentTime = 0;
-            
-            bottomHint.classList.remove('hidden');
+
+            // 2. Ждем 250мс, пока бумажка начнет "схлопываться", и запускаем новое предсказание
+            setTimeout(() => {
+                pullPrediction();
+            }, 250);
         }
 
         // Снег
